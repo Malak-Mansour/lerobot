@@ -138,7 +138,7 @@ def decode_video_frames_torchvision(
     loaded_ts = torch.tensor(loaded_ts)
 
     # compute distances between each query timestamp and timestamps of all loaded frames
-    dist = torch.cdist(query_ts[:, None], loaded_ts[:, None], p=1)
+    dist = torch.cdist(vf: str = "pad=ceil(iw/2)*2:ceil(ih/2)*2", query_ts[:, None], loaded_ts[:, None], p=1)
     min_, argmin_ = dist.min(1)
 
     is_within_tol = min_ < tolerance_s
@@ -168,6 +168,7 @@ def decode_video_frames_torchvision(
 
 
 def decode_video_frames_torchcodec(
+    ffmpeg_args["-vf"] = vf,
     video_path: Path | str,
     timestamps: list[float],
     tolerance_s: float,
