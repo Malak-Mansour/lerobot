@@ -35,13 +35,14 @@ from tqdm import tqdm
 from lerobot.common.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
 from lerobot.common.utils.utils import enter_pressed, move_cursor_up
 
+import math 
+
 NameOrID: TypeAlias = str | int
 Value: TypeAlias = int | float
 
 MAX_ID_RANGE = 252
 
 logger = logging.getLogger(__name__)
-
 
 def get_ctrl_table(model_ctrl_table: dict[str, dict], model: str) -> dict[str, tuple[int, int]]:
     ctrl_table = model_ctrl_table.get(model)
@@ -774,12 +775,11 @@ class MotorsBus(abc.ABC):
             elif self.motors[motor].norm_mode is MotorNormMode.RANGE_0_100:
                 normalized_values[id_] = ((bounded_val - min_) / ((max_ - min_) + 1e-6)) * 100
             elif self.motors[motor].norm_mode is MotorNormMode.DEGREE:
+                resolution = self.model_resolution_table[self.motors[motor].model]
                 if drive_mode:
                     val *= -1
-                val += homing_offset
-                normalized_values[id_] = (
-                    val / (self.model_resolution_table[self.motors[motor].model] // 2) * 180
-                )
+                middle_pos = homing_offset + resolution // 2
+                normalized_values[id_] = ((val - middle_pos) / (resolution // 2)) * 180
             else:
                 # TODO(alibers): velocity and degree modes
                 raise NotImplementedError
@@ -804,12 +804,14 @@ class MotorsBus(abc.ABC):
                 bounded_val = min(100.0, max(0.0, val))
                 unnormalized_values[id_] = int((bounded_val / 100) * (max_ - min_) + min_)
             elif self.motors[motor].norm_mode is MotorNormMode.DEGREE:
-                unnormalized_values[id_] = int(
-                    val / 180 * (self.model_resolution_table[self.motors[motor].model] // 2)
-                )
-                unnormalized_values[id_] -= homing_offset
+                resolution = self.model_resolution_table[self.motors[motor].model]
+                middle_pos = homing_offset + resolution // 2
+                unnormalized_values[id_] = int((val / 180) * resolution//2) + middle_pos
                 if drive_mode:
                     unnormalized_values[id_] *= -1
+
+                if unnormalized_values[id_] < 0:
+                    breakpoint()
             else:
                 # TODO(alibers): velocity and degree modes
                 raise NotImplementedError
